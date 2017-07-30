@@ -1,227 +1,245 @@
 /************************************************************************************************
  * Author: Tida Sooreechine
- * Date: 7/16/2017
- * Program: CS362 Assignment 3 Card Test 1
- * Description: A program for testing dominion.c's Adventurer card implementation
+ * Date: 7/29/2017
+ * Program: CS362 Assignment 4 - Random Test Adventurer Card
+ * Description: A random tester for refactored version of dominion.c's Adventurer card 
 *************************************************************************************************/
- 
+
+#include <math.h> 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "dominion.h"
 #include "dominion_helpers.h"
 #include "rngs.h"
 
+//for 2 players, there should be a total of 270 cards total
+
+//adventurer card implementation
+//player gains up to 2 aditional treasure cards from deck, discards the used adventurer card, ends with original hand count + (-1 to 1)
 
 int main() {
+	
+	srand(time(NULL));
 
-	int i, originalHandCount, originalTreasurePoints, numActions, numBuys, opponentSize;
-	int treasureInDeck = 0, treasurePoints = 0, handPos = 4;
-	int k[10] = {adventurer, council_room, feast, gardens, mine, remodel, smithy, village, baron, great_hall};
-	struct gameState testA, testB, testC;
+	int i, j, x, errors, seed, handPos, wrongCards;
+	int treasuresHand, treasuresDeck, treasuresDiscard, treasuresToDraw, treasuresTotal, treasuresHand2, treasuresDeck2, treasuresDiscard2, treasuresTotal2;
+	int numPlayers = 2;
+	int numTests = 1000; 
+	int successCounts = 0;
+	int successCounts1 = 0;
+	int successCounts2 = 0;
+	float successPercent = 0;
+	int tempHand[MAX_HAND];
+	int k[10] = {adventurer, baron, council_room, feast, gardens, great_hall, mine, remodel, smithy, village};
+	struct gameState G1, G2;
 
 	printf("\n");
-	printf("Testing dominion.c Adventurer card implementation . . . \n"); 
+	printf("Random testing of Adventurer: \n\n"); 
 
-	//3 conditions to satisfy:
-
-	//condition 1 - player 0 gains 0, 1, or 2 additional treasure cards, discards the used adventurer, 
-	//ends with original count or original count + 1 or original count - 1
-	printf(" - CONDITION 1 (player gains correct number of treasure cards):\n");
+	//begin testing iterations	
+	for (x = 0; x < numTests; x++) {
 	
-	//condition 1A
-	printf(" - CONDITION 1A (if there are at least 2 treasure cards left, player gains 2 and discards used adventurer): ");
-	initializeGame(2, k, 101, &testA);
-	opponentSize = testA.handCount[1];
-	numActions = testA.numActions;
-	numBuys = testA.numBuys;
+		printf("Iteration %d: ", x + 1);
 	
-	//replace a card in player 0's hand with adventurer
-	testA.hand[0][handPos] = adventurer;
+		//initialize the game
+		seed = rand();
+		initializeGame(numPlayers, k, seed, &G1);
+		errors = 0;			
+		treasuresHand = 0;
+		treasuresDeck = 0;
+		treasuresDiscard = 0;
+		treasuresToDraw = 0;	
+		treasuresTotal = 0;
+		treasuresHand2 = 0;
+		treasuresDeck2 = 0;
+		treasuresDiscard2 = 0;
+		treasuresTotal2 = 0;	
+		wrongCards = 0;
+		
+		//create player card piles	
+		for (i = 0; i < numPlayers; i++) {	
+			
+			//set up hand
+			if (i == 0)
+				G1.handCount[i] = rand() % 6 + 5;	//player 1 gets a realistic number of 5-10 cards in hand
+			else
+				G1.handCount[i] = 5; //opponents have not had their turn yet, so they should have just 5 cards
+			for (j = 0; j < G1.handCount[i]; j++) 
+				G1.hand[i][j] = rand() % 27;	//27 possible choices of cards
+		
+			//set up deck
+			G1.deckCount[i] = rand() % 50;	
+			for (j = 0; j < G1.deckCount[i]; j++) 
+				G1.deck[i][j] = rand() % 27;
+				
+			//set up discard
+			G1.discardCount[i] = rand() % 50;	
+			for (j = 0; j < G1.discardCount[i]; j++) 
+				G1.discard[i][j] = rand() % 27;
+		}
 
-	//check player 0's hand
-	originalHandCount = testA.handCount[0];
-	for (i = 0; i < testA.handCount[0]; i++) {
-		if (testA.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testA.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testA.hand[0][i] == gold)
-			treasurePoints += 3;
+		//place adventurer card in player's hand
+		handPos = rand() % G1.handCount[0];
+		G1.hand[0][handPos] = adventurer;
+
+		//make copy of game state
+		memcpy(&G2, &G1, sizeof(struct gameState));
+
+		//play refactored adventurer card
+		if (x < (numTests / 2))
+			cardEffect(adventurer, 0, 0, 0, &G2, handPos, 0);
+		else 
+			adventurerCard(&G2, 0, tempHand, 0, 0, 0); 
+	
+		//check original treasure card counts in the three piles
+		for (i = 0; i < G1.handCount[0]; i++) {
+			if ((G1.hand[0][i] == copper) || (G1.hand[0][i] == silver) || (G1.hand[0][i] == gold))
+				treasuresHand++;
+		}
+		for (i = 0; i < G1.deckCount[0]; i++) {
+			if ((G1.deck[0][i] == copper) || (G1.deck[0][i] == silver) || (G1.deck[0][i] == gold))
+				treasuresDeck++;
+		}
+		for (i = 0; i < G1.discardCount[0]; i++) {
+			if ((G1.discard[0][i] == copper) || (G1.discard[0][i] == silver) || (G1.discard[0][i] == gold))
+				treasuresDiscard++;
+		}
+		treasuresToDraw = treasuresDeck + treasuresDiscard;
+		treasuresTotal = treasuresDeck + treasuresDiscard + treasuresHand;
+		
+		//check treasure card counts after play
+		for (i = 0; i < G2.handCount[0]; i++) {
+			if ((G2.hand[0][i] == copper) || (G2.hand[0][i] == silver) || (G2.hand[0][i] == gold))
+				treasuresHand2++;
+		}
+		for (i = 0; i < G2.deckCount[0]; i++) {
+			if ((G2.deck[0][i] == copper) || (G2.deck[0][i] == silver) || (G2.deck[0][i] == gold))
+				treasuresDeck2++;
+		}
+		for (i = 0; i < G2.discardCount[0]; i++) {
+			if ((G2.discard[0][i] == copper) || (G2.discard[0][i] == silver) || (G2.discard[0][i] == gold))
+				treasuresDiscard2++;
+		}
+		treasuresTotal2 = treasuresDeck2 + treasuresDiscard2 + treasuresHand2;
+
+		//check total treasure cards before and after play
+		if (treasuresTotal != treasuresTotal2) {
+			printf("\n");
+			printf(" - FAIL: Total treasure cards are different before and after play");
+			errors = 1;
+		}		
+		//check player's hand
+		//3 cases
+		//case 1: draw 2 treasure cards and discard played adventurer (original hand count + 1)
+		//case 2: draw 1 treasure card and discard played adventurer (original hand count + 0)
+		//case 3: draw 0 cards and discard played adventurer (original hand count - 1)
+		if (treasuresToDraw > 1) {
+			//check hand count
+			if (G2.handCount[0] != G1.handCount[0] + 1) {
+				printf("\n");
+				printf(" - FAIL: Incorrect hand count for player 0 ");
+				printf("(Expected: %d, Actual: %d)", G1.handCount[0] + 1, G2.handCount[0]);
+				errors = 1;
+			}
+			else { 
+				//if hand count is correct, check that new cards added are treasure cards 
+				//new cards should be in old adventurer card's position and be the last card added to deck
+				if (G2.hand[0][handPos] != copper) {
+					if (G2.hand[0][handPos] != silver) {
+						if (G2.hand[0][handPos] != gold) {
+							wrongCards++;
+							errors = 1;
+						}
+					}
+				}
+				if (G2.hand[0][G2.handCount[0] - 1] != copper) {
+					if (G2.hand[0][G2.handCount[0] - 1] != silver) {
+						if (G2.hand[0][G2.handCount[0] - 1] != gold) {
+							wrongCards++;
+							errors = 1;
+						}
+					}
+				}
+				if (wrongCards == 2) {
+					printf("\n");
+					printf(" - FAIL: New cards added to hand are not treasure cards");
+				}
+				else if (wrongCards == 1) {
+					printf("\n");
+					printf(" - FAIL: New card added to hand is not a treasure card");	
+				}
+			}
+		}
+		else if (treasuresToDraw == 1) {
+			if (G2.handCount[0] != G1.handCount[0]) {
+				printf("\n");
+				printf(" - FAIL: Incorrect hand count for player 0 ");
+				printf("(Expected: %d, Actual: %d)", G1.handCount[0], G2.handCount[0]);
+				errors = 1;
+			}
+			else {
+				if (G2.hand[0][handPos] != copper) {
+					if (G2.hand[0][handPos] != silver) {
+						if (G2.hand[0][handPos] != gold) {
+							printf("\n");
+							printf(" - FAIL: New card added to hand is not a treasure card");
+							errors = 1;
+						}
+					}
+				}
+			}
+		}
+		else { 
+			if (G2.handCount[0] != G1.handCount[0] - 1) {
+				printf("\n");
+				printf(" - FAIL: Incorrect hand count for player 0 ");
+				printf("(Expected: %d, Actual: %d)", G1.handCount[0] - 1, G2.handCount[0]);
+				errors = 1;
+			}
+		}
+		
+		//the other hand cards remain the same
+		for (i = 0; i < G1.handCount[0]; i++) {
+			if (i != handPos) {
+				if (G2.hand[0][i] != G1.hand[0][i]) {
+					printf("\n");
+					printf(" - FAIL: Changes has been made to other cards");
+					errors = 1;
+					break;
+				}
+			}	
+		}
+
+		//discard deck increases by at least 1, depending on the randomness of cards in deck pile
+		if (G2.discardCount[0] <= G1.discardCount[0]) {
+			printf("\n");
+			printf(" - FAIL: Adventurer card was not discarded properly after play");
+			errors = 1;
+		}
+
+		if (!errors) {
+			if (x < (numTests / 2)) 
+				successCounts1++;
+			else 
+				successCounts2++;
+			printf("PASS!\n"); 
+		}
+		else
+			printf("\n");
 	}
-	originalTreasurePoints = treasurePoints;
 
-	//check how many treasure cards there are in deck and discard piles
-	for (i = 0; i < testA.deckCount[0]; i++) {
-		if (testA.deck[0][i] == copper)
-			treasureInDeck++;
-		else if (testA.deck[0][i] == silver)
-			treasureInDeck++;
-		else if (testA.deck[0][i] == gold)
-			treasureInDeck++;
-	}
-	for (i = 0; i < testA.discardCount[0]; i++) {
-		if (testA.discard[0][i] == copper)
-			treasureInDeck++;
-		else if (testA.discard[0][i] == silver)
-			treasureInDeck++;
-		else if (testA.discard[0][i] == gold)
-			treasureInDeck++;
-	}
-
-	//use adventurer card
-	cardEffect(adventurer, 0, 0, 0, &testA, handPos, 0);
-	treasurePoints = 0;
-	for (i = 0; i < testA.handCount[0]; i++) {
-		if (testB.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testA.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testA.hand[0][i] == gold)
-			treasurePoints += 3;
-	}
-
-	if ((testA.handCount[0] == originalHandCount + 1) && (treasurePoints > originalTreasurePoints + 1) && (testA.hand[0][handPos] != adventurer))
-		printf("PASS\n");
-	else
-		printf("FAIL\n");
-
-	//condition 1b
-	printf(" - CONDITION 1B (if there is just 1 treasure card in deck & discard piles, player gains 1 and discard used adventurer): ");
-	initializeGame(2, k, 101, &testB);
-
-	//make sure there's only one treasure card in the deck
-	for (i = 0; i < testB.deckCount[0]; i++) 
-		testB.deck[0][i] = duchy;
-	testB.deck[0][0] = copper;	
-
-	//replace a card in player 0's hand with adventurer
-	testB.hand[0][handPos] = adventurer;
-
-	//check player 0's hand
-	treasurePoints = 0;
-	originalHandCount = testB.handCount[0];
-	for (i = 0; i < testB.handCount[0]; i++) {
-		if (testB.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testB.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testB.hand[0][i] == gold)
-			treasurePoints += 3;
-	}
-	originalTreasurePoints = treasurePoints;
-
-	//check how many treasure cards there are in deck and discard piles
-	treasureInDeck = 0;
-	for (i = 0; i < testB.deckCount[0]; i++) {
-		if (testB.deck[0][i] == copper)
-			treasureInDeck++;
-		else if (testB.deck[0][i] == silver)
-			treasureInDeck++;
-		else if (testB.deck[0][i] == gold)
-			treasureInDeck++;
-	}
-	for (i = 0; i < testB.discardCount[0]; i++) {
-		if (testB.discard[0][i] == copper)
-			treasureInDeck++;
-		else if (testB.discard[0][i] == silver)
-			treasureInDeck++;
-		else if (testB.discard[0][i] == gold)
-			treasureInDeck++;
-	}
-
-	//use adventurer card
-	cardEffect(adventurer, 0, 0, 0, &testB, handPos, 0);
-
-	treasurePoints = 0;
-	for (i = 0; i < testB.handCount[0]; i++) {
-		if (testB.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testB.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testB.hand[0][i] == gold)
-			treasurePoints += 3;
-	}
-
-	if ((testB.handCount[0] == originalHandCount) && (treasurePoints > originalTreasurePoints) && (testB.hand[0][handPos] != adventurer))
-		printf("PASS\n");
-	else
-		printf("FAIL\n");
-
-	//condition 1c
-	printf(" - CONDITION 1C (if there are zero treasure cards to be drawned, player gains 0 and discards used adventurer): ");
-	initializeGame(2, k, 101, &testC);
-
-	//make sure there's only one treasure card in the deck
-	for (i = 0; i < testC.deckCount[0]; i++) 
-		testC.deck[0][i] = duchy;
-
-	//replace a card in player 0's hand with adventurer
-	testC.hand[0][handPos] = adventurer;
-
-	//check player 0's hand
-	treasurePoints = 0;
-	originalHandCount = testC.handCount[0];
-	for (i = 0; i < testC.handCount[0]; i++) {
-		if (testC.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testC.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testC.hand[0][i] == gold)
-			treasurePoints += 3;
-	}
-	originalTreasurePoints = treasurePoints;
-
-	//check how many treasure cards there are in deck and discard piles
-	treasureInDeck = 0;
-	for (i = 0; i < testC.deckCount[0]; i++) {
-		if (testC.deck[0][i] == copper)
-			treasureInDeck++;
-		else if (testC.deck[0][i] == silver)
-			treasureInDeck++;
-		else if (testC.deck[0][i] == gold)
-			treasureInDeck++;
-	}
-	for (i = 0; i < testC.discardCount[0]; i++) {
-		if (testC.discard[0][i] == copper)
-			treasureInDeck++;
-		else if (testC.discard[0][i] == silver)
-			treasureInDeck++;
-		else if (testC.discard[0][i] == gold)
-			treasureInDeck++;
-	}
-
-	//use adventurer card
-	cardEffect(adventurer, 0, 0, 0, &testC, handPos, 0);
-
-	treasurePoints = 0;
-	for (i = 0; i < testC.handCount[0]; i++) {
-		if (testC.hand[0][i] == copper)
-			treasurePoints += 1;
-		else if (testC.hand[0][i] == silver)
-			treasurePoints += 2;
-		else if (testC.hand[0][i] == gold)
-			treasurePoints += 3;
-	}
-
-	if ((testC.handCount[0] <= originalHandCount) && (treasurePoints == originalTreasurePoints) && (testC.hand[0][handPos] != adventurer))
-		printf("PASS\n");
-	else
-		printf("FAIL\n");
-
-	//condition 2 - no other changes to player 0
-	printf(" - CONDITION 2 (no changes to number of actions or buys): ");
-	if ((testA.numActions == numActions) && (testA.numBuys == numBuys))
-		printf("PASS!\n");
-	else
-		printf("FAIL!\n");
-
-	//condition 3 - no changes to player 1's handsize
-	printf(" - CONDITION 3 (no changes to opponent's handsize): ");
-	if (testA.handCount[1] == opponentSize) 
-		printf("PASS!\n");
-	else
-		printf("FAIL!\n");  
 	printf("\n");
-
+	printf("Summary: \n");
+	successPercent = (float)successCounts1 / (numTests / 2) * 100;
+	printf("Total successful tests using cardEffect(): %d of %d (%.2f%%)\n", successCounts1, numTests / 2, successPercent);
+	successPercent = (float)successCounts2 / (numTests / 2) * 100;
+	printf("Total successful tests using adventurerCard(): %d of %d (%.2f%%)\n", successCounts2, numTests / 2, successPercent);
+	successCounts = successCounts1 + successCounts2;
+	successPercent = (float)successCounts / numTests * 100;
+	printf("Total successful tests: %d of %d (%.2f%%)\n", successCounts, numTests, successPercent);
+	printf("\n");
 	return 0;
 }
+
