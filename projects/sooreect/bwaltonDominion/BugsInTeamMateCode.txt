@@ -1,0 +1,85 @@
+Author: Tida Sooreechine
+Date: 8/6/2017
+Description: CS362 Assignment 5 - Bugs in Teammate's Code
+
+---------
+
+1. Adventurer Card: 
+
+	- Bug: Incorrect number of treasure cards gained for all three conditions
+
+	- Description: Current player draws incorrect number of treasure cards from deck, discard, or 
+	both piles for all three possible conditions:
+		- When there are 2 treasure cards to be gained, player should result in one extra card in 
+		hand after having discarded the played card.
+		- When there is just 1 treasure card to be gained, player’s hand count should remain the 
+		same after having discarded the played Adventurer card.
+		- When there are no treasure cards to be gained, player’s hand count should be one less 
+		after having played the card.
+
+	- Method(s) of bug discovery:
+		- Unit test – The unit test conducted showed that the function fails to provide correct 
+		number of hand count for all three conditions.  No other bugs were detected.
+		- Random test – Out of the 1000 tests conducted, only 2 tests were successful (1 from 
+		cardEffect() and 1 from adventurerEffect(). The function has a 99.8% failure rate. 
+
+	- Cause(s): One bug discovered in adventurerEffect() is that when incrementing the number of 
+	drawn treasure cards, the function adds 2 cards to the count at a time despite having drawn 
+	just  one treasure card. As a result, the program does not continue to look for a second 
+	treasure card to add to the player’s hand.
+
+			if (cardDrawn == copper || cardDrawn == silver || cardDrawn == gold)
+				drawntreasure = drawntreasure + 2;
+
+	- Effect(s): Player ends up with incorrect hand count. 
+
+---
+
+2. Smithy Card: 
+
+	- Bug: One extra card is discovered in hand after having played Smithy card
+
+	- Description: Current player draws incorrect number of new cards from deck. Smithy card 
+	requires the player to draw 3 cards from deck, resulting in 2 additional cards in the final 
+	hand count after having discarded the played Smithy card. 
+
+	- Method(s) of bug discovery:
+		- Unit test – The unit test conducted showed that the function fails to provide correct 
+		number of hand count after playing card.  No other bugs were detected.
+		- Random test – Out of the 1000 tests conducted, 0 tests were successful. The function 
+		produces 100% failure.
+
+	- Cause(s): One bug discovered in smithyEffect() is that the drawCard() function is repeated in 
+	a for-loop 4 times instead of 3 times. This means the player is actually gaining 4 new cards 
+	instead of 3, dictated by the game’s instructions.
+
+			//+3 Cards
+			for (i = 0; i < 4; i++)
+			{
+				drawCard(currentPlayer, state);
+			}
+
+	- Effect(s): Player ends up with one extra card and has an extra chance of winning. 
+
+---
+
+3. Village Card:
+
+	- Bug: Incorrect hand count after having played card.
+
+	- Description: After having played Village, player should draw 1 card from deck, gain 2 more 
+	actions, and discard played card, ending with the same hand count before plyaing.
+
+	- Method(s) of bug discovery:
+		- Unit test – The unit test conducted showed that the function fails to provide correct number 
+		of hand count after playing card.  No other bugs were detected.
+
+	- Cause(s): One bug discovered in villageEffect() is that the card played is never discarded.
+
+			//discard played card from hand
+			//discardCard(handPos, currentPlayer, state, 0);
+
+	- Effect(s): Player ends up with one additional card in hand.
+
+
+
